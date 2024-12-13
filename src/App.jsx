@@ -172,10 +172,10 @@ function App() {
 
     useEffect(() => {
         appWindow.theme().then((x) => {
-            setIsDark(x == "dark");
+            setIsDark(true);
         });
         const unlistenFuture = appWindow.onThemeChanged(({ payload: theme }) => {
-            setIsDark(theme == "dark");
+            setIsDark(true);
         });
 
         let workspace = localStorage.getItem("cao__workspace");
@@ -220,7 +220,7 @@ function App() {
                         <Tooltip id="rootp" />
                         <div id="theme-box" className={isDark ? "dark" : ""}>
                             <div className={"global w-screen h-screen"}>
-                                <div id="top-hide"></div>
+                                <div data-tauri-drag-region id="top-hide"></div>
                                 {
                                     isReady ?
                                         <RouterProvider router={router}/> :
