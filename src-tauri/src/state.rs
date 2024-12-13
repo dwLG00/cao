@@ -157,10 +157,12 @@ impl GlobalState {
     /// upsert a particular task description into the system
     pub async fn index(&self, request: &BrowseRequest) -> Result<Vec<TaskDescription>> {
         let pool = self.pool.read().expect("poisoning... TODO!").clone().unwrap();
-        let tasks: Vec<TaskDescription> = sqlx::query_as("SELECT * FROM tasks").fetch_all(&pool).await?;
-        let res = request.execute(&tasks)?;
+        //let tasks: Vec<TaskDescription> = sqlx::query_as("SELECT * FROM tasks").fetch_all(&pool).await?;
+        //let res = request.execute(&tasks)?;
+        let res = request.execute_sqlite(&pool).await?;
+        Ok(res)
 
-        Ok(res.iter().map(|&x| x.clone()).collect::<Vec<TaskDescription>>())
+        //Ok(res.iter().map(|&x| x.clone()).collect::<Vec<TaskDescription>>())
     }
 
     /// update calendar information for some state of self
