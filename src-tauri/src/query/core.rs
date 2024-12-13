@@ -123,31 +123,21 @@ impl BrowseRequest {
     }
 
     /// Query directly from the sqlite file
-    /*
-    pub fn execute_sqlite(&self, pool: &SqlitePool) -> Result<Vec<>>{
-        // Filter by...
-        // -> does it have the right availability?
-        // -> does it contain the right tags?
-        // -> does it match the regex? <== impl later
-        // Sort by either
-        // -> captured time
-        // -> start time
-        // -> due time
-        // -> scheduled time
+    pub async fn execute_sqlite(&self, pool: &SqlitePool) -> Result<Vec<TaskDescription>>{
+        // Just get the sql query response
+        let query = self.search_query();
+        let mut sql_filtered: Vec<TaskDescription> = sqlx::query_as(&query).fetch_all(pool).await?;
 
-        let today = Utc::now();
-
-        let availability_str = match self.availability {
-            Availability::Incomplete => "completed = 0",
-            Availability::Available => "completed = 0 AND (start = NULL OR start < )",
-        };
-
-        let mut filtered:Vec<_> = {
-            // Filter by availability and tags
-            let filtered_availability: Vec<_> = sqlx::query_as("SELECT * FROM tables WHERE ")
+        // Do regex matching on app side
+        match &self.query_regexp {
+            Some(regexp) => {
+                let regex = Regex::new(&regexp)?;
+                sql_filtered.retain(|x| !regex.captures(&x.content).is_none());
+            },
+            None => {}
         }
+        Ok(sql_filtered)
     }
-    */
 
     /// Use a QueryRequest to filter a list of tasks
     pub fn execute<'a>(&self, data: &'a[TaskDescription]) -> Result<Vec<&'a TaskDescription>>{
