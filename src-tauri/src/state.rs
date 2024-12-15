@@ -1,17 +1,37 @@
 use futures::FutureExt;
 use serde::{Serialize, Deserialize};
 use std::panic::AssertUnwindSafe;
+<<<<<<< HEAD
 use std::str::FromStr;
+=======
+use std::sync::atomic::{AtomicU64};
+use std::time::SystemTime;
+>>>>>>> dev
 use tokio::task::JoinHandle;
 use futures::future::join_all;
 use super::tasks::{core::TaskDescription};
 use super::query::core::BrowseRequest;
 use super::scheduling::{Event, freebusy::find_events};
+<<<<<<< HEAD
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use tokio::time::{sleep, Duration};
 use anyhow::{Result};
 use std::sync::Arc;
 use std::sync::{Mutex, RwLock};
+=======
+use tokio::time::{sleep, Duration};
+
+use anyhow::{Result, anyhow};
+use std::fs::File;
+use std::io::prelude::*;
+
+use std::sync::{Arc};
+
+
+use std::sync::Mutex;
+
+use serde_json::{to_string_pretty, from_str};
+>>>>>>> dev
 
 /// what's the upsert tryin' to 'sert?
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -145,6 +165,14 @@ impl GlobalState {
             Transaction::Horizon(horizon) => self.set_horizon_(*horizon).await,
             Transaction::Calendars(calendars) => self.set_calendars_(calendars).await
         }
+    }
+
+    /// complete a task
+    pub fn complete(&self, id: &str) -> Option<TaskDescription> {
+        let res = self.complete_task_(id);
+        let _ = self.save();
+
+        res
     }
 
     /// drop something from the system

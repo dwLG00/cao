@@ -1,4 +1,5 @@
 use sqlx::Sqlite;
+use std::{io::Read, path::Path, sync::atomic::AtomicU64, time::SystemTime};
 
 use super::scheduling::Event;
 use crate::tasks::core::TaskDescription;
@@ -35,6 +36,23 @@ pub async fn events(state: tauri::State<'_, GlobalState>) -> Result<Vec<Event>, 
     };
 
     work_slots
+}
+
+use notify::{event::Event as NE};
+use tauri::window::Window;
+
+use std::fs::File;
+use std::sync::Mutex;
+use serde_json::{from_str};
+
+
+use std::fs::metadata;
+use std::sync::Arc;
+
+use notify::{Watcher, RecursiveMode};
+
+fn get_time(path: &str) -> anyhow::Result<u64> {
+    Ok(metadata(path)?.modified()?.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
 }
 
 /// return a snapshot of the application state
@@ -80,4 +98,10 @@ pub async fn delete(transaction: Delete, state: tauri::State<'_, GlobalState>) -
     state.delete(&transaction).await;
 
     Ok(())
+}
+
+/// complete a task
+#[tauri::command]
+pub fn complete(id: String, state: tauri::State<GlobalState>) -> Option<TaskDescription> {
+    state.complete(&id)
 }

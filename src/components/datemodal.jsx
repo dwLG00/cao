@@ -5,7 +5,7 @@ import DatePicker from "./datepicker.jsx";
 
 import { useDetectClickOutside } from 'react-detect-click-outside';
 
-export default forwardRef(function DateModal({ onDate, initialDate, onClose }, ref) {
+export default forwardRef(function DateModal({ onDate, initialDate, onClose, start, end }, ref) {
     let [open, setOpen] = useState(false);
 
     if (ref) {
@@ -14,7 +14,11 @@ export default forwardRef(function DateModal({ onDate, initialDate, onClose }, r
         };
     }
 
+<<<<<<< HEAD
     const wrapperRef = useDetectClickOutside({onTriggered: () => {
+=======
+    const wrapperRef = useDetectClickOutside({ onTriggered: () => {
+>>>>>>> dev
         if (open) {
             if (typeof onClose == "function") {
                 onClose();
@@ -26,6 +30,8 @@ export default forwardRef(function DateModal({ onDate, initialDate, onClose }, r
     return (
         <div className="datemodal" style={{display: open ? "block": "none" }}  ref={wrapperRef}>
             <DatePicker
+                start={start}
+                end={end}
                 initialDate={initialDate}
                 onDate={(d) => (typeof onDate == "function") ? onDate(d) : null}
                 onDone={(d) => {
