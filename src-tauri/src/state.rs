@@ -150,7 +150,7 @@ impl GlobalState {
     /// drop something from the system
     pub async fn delete(&self, transaction: &Delete) {
         let _ = match transaction {
-            Delete::Task(task) => self.delete_task_(&task),
+            Delete::Task(task) => self.delete_task_(&task).await,
         };
     }
 
