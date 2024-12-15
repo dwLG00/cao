@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use std::{cmp::Ordering, default::Default};
 use regex::Regex;
-use sqlx::sqlite::SqlitePool;
+use sqlx::sqlite::{Sqlite, SqlitePool};
 use sqlx::{query_builder::QueryBuilder, Execute};
 
 use chrono::{Utc, DateTime};
@@ -69,28 +69,33 @@ impl BrowseRequest {
         let today = Utc::now();
 
         let mut query = {
-            let mut query = QueryBuilder::new("SELECT * FROM tasks ");
+            let mut query = QueryBuilder::<'_, Sqlite>::new("SELECT * FROM tasks ");
             if self.availability != Availability::All || self.tags.len() != 0 {
                 query.push(" WHERE ");
             }
             match self.availability {
                 Availability::Incomplete => {
-                    query.push(" complete == 0 ");
+                    query.push(" completed == 0 ");
                 },
                 Availability::Available => {
-                    query.push(" complete == 0 AND (start == NULL OR start < ?) ");
-                    query.push_bind(today);
+                    query.push(" completed == 0 AND (");
+                    let mut separated = query.separated(" OR ");
+                    separated.push("start == NULL");
+                    separated.push("start < '");
+                    separated.push_bind_unseparated(today);
+                    separated.push_unseparated("') ");
                 },
                 Availability::Done => {
-                    query.push(" complete == 1 ");
+                    query.push(" completed == 1 ");
                 },
                 Availability::All => {
                     query.push(" TRUE ");
                 }
             }
             for tag in self.tags.iter() {
-                query.push(" AND tag LIKE '%?%' ");
-                query.push_bind(tag);
+                let tag_percent = format!("%{}%", tag);
+                query.push(" AND tags LIKE ");
+                query.push_bind(tag_percent);
             }
             query
         };
@@ -98,35 +103,47 @@ impl BrowseRequest {
         match self.order.order {
             OrderType::Captured => {
                 query.push(" ORDER BY captured ");
-                query.push_bind(order_direction);
+                query.push(order_direction);
             },
             OrderType::Start => {
                 query.push(" ORDER BY start ");
-                query.push_bind(order_direction);
+                query.push(order_direction);
                 query.push(" , captured ");
-                query.push_bind(order_direction);
+                query.push(order_direction);
             },
             OrderType::Due => {
                 query.push(" ORDER BY due ");
-                query.push_bind(order_direction);
+                query.push(order_direction);
                 query.push(" , captured ");
-                query.push_bind(order_direction);
+                query.push(order_direction);
             },
             OrderType::Scheduled => {
                 query.push(" ORDER BY schedule ");
-                query.push_bind(order_direction);
+                query.push(order_direction);
                 query.push(" , captured ");
-                query.push_bind(order_direction);
+                query.push(order_direction);
             }
         }
-        query.build().sql().into()
+        query.into_sql()
     }
 
     /// Query directly from the sqlite file
     pub async fn execute_sqlite(&self, pool: &SqlitePool) -> Result<Vec<TaskDescription>>{
         // Just get the sql query response
+        let today = format!("{}", Utc::now().format("%+"));
         let query = self.search_query();
-        let mut sql_filtered: Vec<TaskDescription> = sqlx::query_as(&query).fetch_all(pool).await?;
+        println!("query: {:?}", query);
+        let mut query_as = sqlx::query_as(&query);
+        if self.availability == Availability::Available {
+            println!("bound {:?}", today);
+            query_as = query_as.bind(today);
+        }
+        for tag in self.tags.iter() {
+            let tag_percent = format!("%{}%", tag);
+            println!("bound {:?}", tag_percent);
+            query_as = query_as.bind(tag_percent);
+        }
+        let mut sql_filtered: Vec<TaskDescription> = query_as.fetch_all(pool).await?;
 
         // Do regex matching on app side
         match &self.query_regexp {
